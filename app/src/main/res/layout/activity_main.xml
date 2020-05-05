@@ -18,7 +18,7 @@
         android:id="@+id/info"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_weight="7"
+        android:layout_weight="6"
         android:textSize="20sp"/>
     <Button
         android:id="@+id/start"
@@ -32,11 +32,14 @@
         android:layout_height="match_parent"
         android:layout_weight="7"
         android:text="stop"/>
-    <FrameLayout
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_weight="3">
+        android:orientation="horizontal"
+        android:weightSum="2"
+        android:layout_weight="4">
         <ScrollView
+            android:layout_weight="1"
             android:layout_width="match_parent"
             android:layout_height="match_parent">
     <TextView
@@ -44,10 +47,22 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:text="Coordinates Here"
-        android:textSize="20sp"
+        android:textSize="17sp"
         />
         </ScrollView>
-    </FrameLayout>
+        <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+        <TextView
+            android:id="@+id/text_bt"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:text=" Bluetooth devices >>"
+            android:textSize="17sp"
+            />
+    </ScrollView>
+
+    </LinearLayout>
 
 </LinearLayout>
 </androidx.constraintlayout.widget.ConstraintLayout>
