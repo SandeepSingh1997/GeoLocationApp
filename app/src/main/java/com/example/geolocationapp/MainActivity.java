@@ -1,10 +1,12 @@
 package com.example.geolocationapp;
 
 import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 
 import android.Manifest;
+import android.app.Dialog;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.content.BroadcastReceiver;
@@ -19,21 +21,20 @@ import android.location.Location;
 
 import android.os.Bundle;
 import android.os.Looper;
+import android.view.LayoutInflater;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
-
+import java.util.Map;
+import java.util.regex.*;
 import com.google.android.gms.location.FusedLocationProviderClient;
-
 import com.google.android.gms.location.LocationCallback;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.location.LocationServices;
-import com.google.android.gms.nearby.messages.Distance;
-
-import java.text.DateFormat;
 import java.util.ArrayList;
 
 public class MainActivity extends AppCompatActivity {
@@ -41,13 +42,16 @@ public class MainActivity extends AppCompatActivity {
     private Button startbutton;
     private Button stopbutton;
     private Button savebutton;
+    private Button mapbutton;
+
     private TextView textView;
     private TextView textViewinfo;
-    private TextView textViewdata;
+
     private Button showbutton;
 
     SqliteDBHelper dbHelper;
     SQLiteDatabase db, dbread;
+    Context activitycont ;
 
     private ArrayList<String> timestamp;
     private ArrayList<String> latitude;
@@ -59,10 +63,11 @@ public class MainActivity extends AppCompatActivity {
 
     int BT_REQ = 200;
     int LOC_PER = 100 ;
-
     BluetoothAdapter bluetoothAdapter;
-    private String  id ="1234567";
     String prev_BT_name ;
+
+    String  id="0000000000";
+    int std_id_len = 10;///
 
     IntentFilter intentFilter;
     FusedLocationProviderClient fusedLocationProviderClient;
@@ -77,29 +82,54 @@ public class MainActivity extends AppCompatActivity {
             if(BluetoothDevice.ACTION_FOUND.equals(action)){
                 BluetoothDevice bluetoothDevice = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
                 textView.append("\nBT device : "+bluetoothDevice.getName()+"\n");
-                btDevices.add(bluetoothDevice.getName());
-                btTimestamp.add(Long.toString( System.currentTimeMillis()) );
+
+                if ( isValidId(bluetoothDevice.getName()) ){
+                    btDevices.add(bluetoothDevice.getName());
+                    btTimestamp.add(Long.toString( System.currentTimeMillis()) );
+                }
+            }
+            ////if bluetooth stops searching
+            if(BluetoothAdapter.ACTION_DISCOVERY_FINISHED.equals(action)){
+                bluetoothAdapter.startDiscovery();
             }
         }
     };
+
+
+
+    boolean isValidId(String id){
+        boolean ret_val = false;
+        if( Pattern.matches("[0-9]{"+ std_id_len + "}", id))
+            ret_val = true;
+         return ret_val;
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        //get data from login call
+        Intent intent = getIntent();
+        id = intent.getStringExtra("UID");
+        std_id_len = intent.getIntExtra("STD_ID_LEN",10);
+
+        activitycont = this;
+
         startbutton = (Button) findViewById(R.id.start);
         stopbutton = (Button) findViewById(R.id.stop);
-
         savebutton = (Button) findViewById(R.id.save);
+        mapbutton = (Button)findViewById(R.id.map);
+
         textView = (TextView) findViewById(R.id.text_coor);
         textViewinfo = (TextView) findViewById(R.id.info) ;
-        textViewdata = (TextView) findViewById(R.id.text_bt);
+
         showbutton = (Button) findViewById(R.id.show);
 
-         dbHelper = new SqliteDBHelper(getBaseContext());
+         dbHelper = new SqliteDBHelper(activitycont);
          db = dbHelper.getWritableDatabase();
          dbread = dbHelper.getReadableDatabase();
+
 
          timestamp = new ArrayList<>();
          latitude = new ArrayList<>();
@@ -136,8 +166,10 @@ public class MainActivity extends AppCompatActivity {
         intent.putExtra(BluetoothAdapter.EXTRA_DISCOVERABLE_DURATION,600);
         startActivity(intent);
 
-        //register broadcast reciver for discovered devices
-        intentFilter = new IntentFilter(BluetoothDevice.ACTION_FOUND);
+        //what intents the broadcast reciever wants to listen for
+        intentFilter = new IntentFilter();
+        intentFilter.addAction(BluetoothDevice.ACTION_FOUND);
+        intentFilter.addAction(BluetoothAdapter.ACTION_DISCOVERY_FINISHED);
     }
 
     private void enableButtons() {
@@ -145,13 +177,12 @@ public class MainActivity extends AppCompatActivity {
             startbutton.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-
                     if (fusedLocationProviderClient != null) {
                         fusedLocationProviderClient.requestLocationUpdates(locationRequest, locationCallback, Looper.myLooper());
                         startbutton.setEnabled(!startbutton.isEnabled());
                         stopbutton.setEnabled(true);
-                        bluetoothAdapter.startDiscovery();
                         registerReceiver(receiver, intentFilter);
+                        bluetoothAdapter.startDiscovery();
                     }
                 }
             });
@@ -163,9 +194,17 @@ public class MainActivity extends AppCompatActivity {
                        fusedLocationProviderClient.removeLocationUpdates(locationCallback);
                         stopbutton.setEnabled(!stopbutton.isEnabled());
                         startbutton.setEnabled(true);
-                        bluetoothAdapter.cancelDiscovery();
                         unregisterReceiver(receiver);
+                        bluetoothAdapter.cancelDiscovery();
                     }
+                }
+            });
+
+            mapbutton.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    Intent intent = new Intent(activitycont, MapsActivity.class);
+                    startActivity(intent);
                 }
             });
 
@@ -204,33 +243,44 @@ public class MainActivity extends AppCompatActivity {
                 }
             });
 
-            showbutton.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    textViewdata.setText(" ");
+        showbutton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                AlertDialog.Builder builder = new AlertDialog.Builder(activitycont);////
+                LayoutInflater inflater = getLayoutInflater();
 
-                    textViewdata.append("\n LOCATION TRAIL :");
-                    String[] projection = {DbSchema.COLUMN_Timestamp, DbSchema.COLUMN_Long, DbSchema.COLUMN_Lat};
-                    Cursor cursor = dbread.query(DbSchema.TABLE_NAME, projection, null, null, null, null, null);
+                View dialogview = inflater.inflate(R.layout.show_data,null,false);
+                //to change the contents inside dialog
+                TextView textdata = (TextView) dialogview.findViewById(R.id.showdatalayout);
+                textdata.setText(" ");
 
-                    while (cursor.moveToNext()){
-                        textViewdata.append("\n" +"time : "+ cursor.getString(cursor.getColumnIndexOrThrow(DbSchema.COLUMN_Timestamp))+
-                                        "\n" +"lat : "+ cursor.getString(cursor.getColumnIndexOrThrow(DbSchema.COLUMN_Lat))+
-                                "\n" +"lon : "+ cursor.getString(cursor.getColumnIndexOrThrow(DbSchema.COLUMN_Long))+ "\n");
-                    }
-                    cursor.close();
+                textdata.append("\nLOCATION TRAIL :\n");
+                String[] projection = {DbSchema.COLUMN_Timestamp, DbSchema.COLUMN_Long, DbSchema.COLUMN_Lat};
+                Cursor cursor = dbread.query(DbSchema.TABLE_NAME, projection, null, null, null, null, null);
 
-        /////////////bt info
-                    textViewdata.append("\n BLUETOOTH INFO :");
-                    String[] projectionbt = {DbSchema.BT_COLUMN_BtDevice, DbSchema.BT_COLUMN_TimeStamp };
-                    Cursor cursorbt = dbread.query(DbSchema.BT_TABLE_NAME, projectionbt, null, null, null, null, null);
-                    while (cursorbt.moveToNext()){
-                        textViewdata.append("\nDevice :" + cursorbt.getString( cursorbt.getColumnIndexOrThrow( DbSchema.BT_COLUMN_BtDevice))+
-                                "\nTime :"+ cursorbt.getString( cursorbt.getColumnIndexOrThrow( DbSchema.BT_COLUMN_TimeStamp))+"\n" );
-                    }
-                    cursorbt.close();
+                while (cursor.moveToNext()){
+                    textdata.append("\n" +"time : "+ cursor.getString(cursor.getColumnIndexOrThrow(DbSchema.COLUMN_Timestamp))+
+                            "\n" +"lat  : "+ cursor.getString(cursor.getColumnIndexOrThrow(DbSchema.COLUMN_Lat))+
+                            "\n" +"lon  : "+ cursor.getString(cursor.getColumnIndexOrThrow(DbSchema.COLUMN_Long))+ "\n");
+
                 }
-            });
+                cursor.close();
+
+
+                /////////////bt info
+                textdata.append("\nBLUETOOTH DEVICES IN CONTACT :\n");
+                String[] projectionbt = {DbSchema.BT_COLUMN_BtDevice, DbSchema.BT_COLUMN_TimeStamp };
+                Cursor cursorbt = dbread.query(DbSchema.BT_TABLE_NAME, projectionbt, null, null, null, null, null);
+                while (cursorbt.moveToNext()){
+                    textdata.append("\nDevice : " + cursorbt.getString( cursorbt.getColumnIndexOrThrow( DbSchema.BT_COLUMN_BtDevice))+
+                            "\nTime   : "+ cursorbt.getString( cursorbt.getColumnIndexOrThrow( DbSchema.BT_COLUMN_TimeStamp))+"\n" );
+                }
+                cursorbt.close();
+
+               // builder.setView(dialogview);
+                //builder.show();
+            }
+        });
     }
 
     @Override

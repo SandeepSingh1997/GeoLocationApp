@@ -12,8 +12,7 @@
     app:layout_constraintBottom_toBottomOf="parent"
     app:layout_constraintLeft_toLeftOf="parent"
     app:layout_constraintRight_toRightOf="parent"
-    app:layout_constraintTop_toTopOf="parent"
-    android:weightSum="30">
+    app:layout_constraintTop_toTopOf="parent">
     <TextView
         android:id="@+id/info"
         android:layout_width="match_parent"
@@ -31,11 +30,14 @@
         android:layout_weight="1"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:shadowColor="@color/black"
+        android:backgroundTint="@color/green"
         android:text="start"/>
     <Button
         android:id="@+id/stop"
         android:layout_weight="1"
         android:layout_width="match_parent"
+        android:backgroundTint="@color/red"
         android:layout_height="match_parent"
         android:text="stop"/>
     </LinearLayout>
@@ -45,14 +47,19 @@
         android:layout_height="match_parent"
         android:layout_weight="9"
         android:orientation="horizontal"
-        android:weightSum="2">
+        >
         <Button
         android:layout_weight="1"
         android:id="@+id/save"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:text="save"/>
-
+        <Button
+            android:layout_weight="1"
+            android:id="@+id/map"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:text="map"/>
         <Button
             android:id="@+id/show"
             android:layout_weight="1"
@@ -65,31 +72,20 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:orientation="horizontal"
-        android:weightSum="2"
         android:layout_weight="4">
         <ScrollView
             android:layout_weight="1"
             android:layout_width="match_parent"
             android:layout_height="match_parent">
-    <TextView
+        <TextView
         android:id="@+id/text_coor"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:text="LIVE INFO :"
         android:textSize="16sp"
+        android:layout_margin="10dp"
         />
         </ScrollView>
-        <ScrollView
-        android:layout_width="match_parent"
-        android:layout_height="match_parent">
-        <TextView
-            android:id="@+id/text_bt"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:text="DATA :"
-            android:textSize="16sp"
-            />
-    </ScrollView>
 
     </LinearLayout>
 
